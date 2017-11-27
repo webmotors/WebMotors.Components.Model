@@ -22,21 +22,47 @@ namespace WebMotors.Components.Model.Core
 		private DbProviderFactory _factory = null;
 		private DbConnection _connection;
 		private DbTransaction _transaction;
+		private Action<string> _log = null;
 
 		#endregion
 
 		#region [ +Constructors ]
 
-		public Database(string connection, bool automaticOpenConnection = true, IConfigurationRoot configuration = null)
+		public Database(string connection, bool automaticOpenConnection = true, IConfigurationRoot configuration = null, Action<string> log = null)
 		{
+			_log = log;
 			if (configuration == null)
 				configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
 			_stringConnection = $"{configuration["connectionstrings:{0}:connectionstring".FormatStr(connection)]}";
 			_typeFactory = $"{configuration["connectionstrings:{0}:providername".FormatStr(connection)]}";
+			Log(_stringConnection);
+			Log(_typeFactory);
+			var assemblyName = _typeFactory.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[1].Trim();
+			var assemblyType = _typeFactory.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+			Log(assemblyName);
+			Log(assemblyType);
+			Type typeConnection = Assembly.Load(new AssemblyName(assemblyName)).GetType(assemblyType);
+			Log(typeConnection.ToString());
 			if (_typeFactory.Contains("System.Data.SqlClient.SqlClientFactory"))
 				_factory = System.Data.SqlClient.SqlClientFactory.Instance;
 			else
-				_factory = (DbProviderFactory)Activator.CreateInstance(Type.GetType(_typeFactory));
+				_factory = (DbProviderFactory)Activator.CreateInstance(typeConnection);
+			Log(_factory.ToString());
+			CreateConnection(automaticOpenConnection);
+		}
+
+		public Database(Type typeConnection, string connection, bool automaticOpenConnection = true, IConfigurationRoot configuration = null, Action<string> log = null)
+		{
+			_log = log;
+			if (configuration == null)
+				configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
+			_stringConnection = $"{configuration["connectionstrings:{0}:connectionstring".FormatStr(connection)]}";
+			Log(typeConnection.ToString());
+			if (_typeFactory.Contains("System.Data.SqlClient.SqlClientFactory"))
+				_factory = System.Data.SqlClient.SqlClientFactory.Instance;
+			else
+				_factory = (DbProviderFactory)Activator.CreateInstance(typeConnection);
+			Log(_factory.ToString());
 			CreateConnection(automaticOpenConnection);
 		}
 
@@ -106,6 +132,7 @@ namespace WebMotors.Components.Model.Core
 		#region [ CreateConnection ]
 		public void CreateConnection(bool openConnection = true)
 		{
+			Log("CreateConnection Start");
 			if (_connection == null)
 			{
 				_connection = _factory.CreateConnection();
@@ -113,6 +140,7 @@ namespace WebMotors.Components.Model.Core
 				if (openConnection)
 					_connection.Open();
 			}
+			Log("CreateConnection End");
 		}
 		#endregion
 
@@ -343,6 +371,14 @@ namespace WebMotors.Components.Model.Core
 				_transaction.Dispose();
 				_transaction = null;
 			}
+		}
+		#endregion
+
+		#region [ Log ]
+		private void Log(string message)
+		{
+			if (_log != null)
+				_log(message);
 		}
 		#endregion
 
