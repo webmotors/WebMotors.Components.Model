@@ -54,9 +54,15 @@ namespace WebMotors.Components.Model.Core
 		public Database(Type typeConnection, string connection, bool automaticOpenConnection = true, IConfigurationRoot configuration = null, Action<string> log = null)
 		{
 			_log = log;
-			if (configuration == null)
-				configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
-			_stringConnection = $"{configuration["connectionstrings:{0}:connectionstring".FormatStr(connection)]}";
+			if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json")))
+			{
+				if (configuration == null)
+					configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
+				_stringConnection = $"{configuration["connectionstrings:{0}:connectionstring".FormatStr(connection)]}";
+			}
+			if (!string.IsNullOrWhiteSpace(_stringConnection))
+				_stringConnection = connection;
+			_typeFactory = typeConnection.ToString();
 			Log(typeConnection.ToString());
 			if (_typeFactory.Contains("System.Data.SqlClient.SqlClientFactory"))
 				_factory = System.Data.SqlClient.SqlClientFactory.Instance;
