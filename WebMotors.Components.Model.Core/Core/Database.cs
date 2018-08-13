@@ -60,7 +60,7 @@ namespace WebMotors.Components.Model.Core
 					configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
 				_stringConnection = $"{configuration["connectionstrings:{0}:connectionstring".FormatStr(connection)]}";
 			}
-			if (!string.IsNullOrWhiteSpace(_stringConnection))
+			if (string.IsNullOrWhiteSpace(_stringConnection))
 				_stringConnection = connection;
 			_typeFactory = typeConnection.ToString();
 			Log(typeConnection.ToString());

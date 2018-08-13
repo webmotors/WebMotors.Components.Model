@@ -77,6 +77,7 @@ namespace WebMotors.Components.Model.Validation.Attributes
 		#region [ ValidType ]
 		public bool ValidType(PersistenceType type)
 		{
+			if (this._types == null || this._types.Length == 0) return true;
 			foreach (PersistenceType t in this._types)
 				if (t == type)
 					return true;
