@@ -28,18 +28,18 @@ namespace WebMotors.Components.Model.Validation
 
 			foreach (PropertyInfo p in propriedades)
 			{
-				IEnumerable<Attribute> attributes = (IEnumerable<Attribute>)p.GetCustomAttributes(false);
+				var attributes = p.GetCustomAttributes(false);
 				object value = p.GetValue(entity, null);
 				ValidItem(value, type, database, attributes, result, method);
 			}
 
-			IEnumerable<Attribute> classAttr = (IEnumerable<Attribute>)entity.GetType().GetTypeInfo().GetCustomAttributes(false);
+			var classAttr = entity.GetType().GetTypeInfo().GetCustomAttributes(false);
 			ValidItem(entity, type, database, classAttr, result, method);
 
 			return result;
 		}
 
-		private static void ValidItem(object value, PersistenceType type, Database database, IEnumerable<Attribute> attributes, ValidationResult result, string method)
+		private static void ValidItem(object value, PersistenceType type, Database database, object[] attributes, ValidationResult result, string method)
 		{
 			foreach (object attribute in attributes)
 			{
