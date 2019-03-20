@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WebMotors.Components.Model.Validation.Attributes
 {
@@ -23,7 +19,13 @@ namespace WebMotors.Components.Model.Validation.Attributes
 		#region [ valid ]
 		internal override void Valid(object value, ValidationResult validationResult)
 		{
-			if (value.GetDefaultValue().Equals(value))
+			var defaultValue = value.GetDefaultValue();
+			if
+				(
+					(defaultValue == null && value == null) ||
+					(value != null && value.GetType().Equals(string.Empty.GetType()) && string.IsNullOrWhiteSpace(value.ToString())) ||
+					(defaultValue != null && defaultValue.Equals(value))
+				)
 			{
 				validationResult.Append(Message);
 			}
