@@ -31,8 +31,14 @@ namespace WebMotors.Components.Model.Core
 		public Database(string connection, bool automaticOpenConnection = true, IConfigurationRoot configuration = null, Action<string> log = null)
 		{
 			_log = log;
+
 			if (configuration == null)
-				configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
+				configuration = new ConfigurationBuilder()
+					.SetBasePath(Directory.GetCurrentDirectory())
+					.AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true)
+					.AddJsonFile("appsettings.json", optional: true)
+					.Build();
+
 			_stringConnection = $"{configuration["connectionstrings:{0}:connectionstring".FormatStr(connection)]}";
 			_typeFactory = $"{configuration["connectionstrings:{0}:providername".FormatStr(connection)]}";
 			Log(_stringConnection);
