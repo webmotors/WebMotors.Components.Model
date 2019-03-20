@@ -23,7 +23,7 @@ namespace WebMotors.Components.Model.Validation.Attributes
 		#region [ valid ]
 		internal override void Valid(object value, ValidationResult validationResult)
 		{
-			if (value.GetDefaultValue().Equals(value))
+			if (value == null || value.Equals(value.GetDefaultValue()))
 			{
 				validationResult.Append(Message);
 			}
