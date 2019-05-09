@@ -21,7 +21,7 @@ namespace WebMotors.Components.Model.Core
 		public BaseModel(TPk pk)
 		{
 			PK = pk;
-		} 
+		}
 		#endregion
 
 		#region [ PK ]
@@ -71,23 +71,27 @@ namespace WebMotors.Components.Model.Core
 		protected static T Get<T>(string connection, TPk pk, string procedure = "get")
 			where T : BaseModel<TPk>
 		{
-			var getEntity = getEntity<T>(string.Empty, procedure);
-
 			using (Database database = new Database(connection))
 			{
-				var sqlString = getEntity.getSQLString(database);
-				ArrayList pParameters = SQLHelperEdited.AddParameter(database, "@Pk", pk);
-				using (DbDataReader dr = SQLHelperEdited.ExecuteReader(database, sqlString, pParameters, CommandType.Text))
+				return Get<T>(database, pk, procedure);
+			}
+		}
+		protected static T Get<T>(Database database, TPk pk, string procedure = "get")
+			where T : BaseModel<TPk>
+		{
+			var getEntity = getEntity<T>(string.Empty, procedure);
+
+			var sqlString = getEntity.getSQLString(database);
+			ArrayList pParameters = SQLHelperEdited.AddParameter(database, "@Pk", pk);
+			using (DbDataReader dr = SQLHelperEdited.ExecuteReader(database, sqlString, pParameters, CommandType.Text))
+			{
+				while (dr.Read())
 				{
-					while (dr.Read())
-					{
-						setEntity(getEntity, dr);
-					}
+					setEntity(getEntity, dr);
 				}
 			}
 
-			GetListRelations<T>(getEntity, connection, procedure);
-
+			GetListRelations<T>(getEntity, database, procedure);
 			if (getEntity.EntityFill) return (T)getEntity.Instance;
 			return default(T);
 		}
@@ -97,12 +101,18 @@ namespace WebMotors.Components.Model.Core
 		{
 			using (Database database = new Database(connectionString))
 			{
-				ArrayList pParameters = new ArrayList();
-				foreach (var item in parameters)
-					SQLHelperEdited.AddParameter(database, ref pParameters, item.Key, item.Value);
-
-				return select<T>(database, sql, pParameters, commandType);
+				return Find<T>(database, sql, commandType, parameters, procedure);
 			}
+		}
+
+		protected static List<T> Find<T>(Database database, string sql, CommandType commandType, Dictionary<string, object> parameters, string procedure = null)
+			where T : BaseModel<TPk>
+		{
+			ArrayList pParameters = new ArrayList();
+			foreach (var item in parameters)
+				SQLHelperEdited.AddParameter(database, ref pParameters, item.Key, item.Value);
+
+			return select<T>(database, sql, pParameters, commandType);
 		}
 
 		protected static PagingInfo<T> FindPaging<T>(string connectionString, string sql, CommandType commandType, Dictionary<string, object> parametros, int page, int pageSize, string orderBy = null, string procedure = null)
@@ -110,12 +120,17 @@ namespace WebMotors.Components.Model.Core
 		{
 			using (Database database = new Database(connectionString))
 			{
-				ArrayList pParameters = new ArrayList();
-				foreach (var item in parametros)
-					SQLHelperEdited.AddParameter(database, ref pParameters, item.Key, item.Value);
-
-				return selectPaging<T>(database, sql, pParameters, commandType, page, pageSize, orderBy, procedure);
+				return FindPaging<T>(database, sql, commandType, parametros, page, pageSize, orderBy, procedure);
 			}
+		}
+
+		protected static PagingInfo<T> FindPaging<T>(Database database, string sql, CommandType commandType, Dictionary<string, object> parametros, int page, int pageSize, string orderBy = null, string procedure = null)
+		{
+			ArrayList pParameters = new ArrayList();
+			foreach (var item in parametros)
+				SQLHelperEdited.AddParameter(database, ref pParameters, item.Key, item.Value);
+
+			return selectPaging<T>(database, sql, pParameters, commandType, page, pageSize, orderBy, procedure);
 		}
 
 		protected static Database CreateDatabase(string connection)
@@ -125,22 +140,27 @@ namespace WebMotors.Components.Model.Core
 
 		public string getSQLString(string connection, string procedure = "get")
 		{
-			var result = string.Empty;
-			var getEntity = getEntityType(procedure);
 			using (Database database = new Database(connection, false))
 			{
-				result = getEntity.getSQLString(database);
-				foreach (var p in getEntity.ListEntity)
-				{
-					var atributeListRelation = p.GetCustomAttributes<MapperListRelationshipAttribute>(false);
+				return getSQLString(database, procedure);
+			}
+		}
 
-					foreach (var attribute in atributeListRelation)
+		public string getSQLString(Database database, string procedure = "get")
+		{
+			var result = string.Empty;
+			var getEntity = getEntityType(procedure);
+			result = getEntity.getSQLString(database);
+			foreach (var p in getEntity.ListEntity)
+			{
+				var atributeListRelation = p.GetCustomAttributes<MapperListRelationshipAttribute>(false);
+
+				foreach (var attribute in atributeListRelation)
+				{
+					if (attribute.AutomaticGet)
 					{
-						if (attribute.AutomaticGet)
-						{
-							var getEntityListRelation = getEntityType(attribute.ClassRelationship, procedure, attribute.ForeignKey);
-							result = string.Concat(result, Environment.NewLine, getEntityListRelation.getSQLString(database, attribute.ForeignKey));
-						}
+						var getEntityListRelation = getEntityType(attribute.ClassRelationship, procedure, attribute.ForeignKey);
+						result = string.Concat(result, Environment.NewLine, getEntityListRelation.getSQLString(database, attribute.ForeignKey));
 					}
 				}
 			}
@@ -151,62 +171,77 @@ namespace WebMotors.Components.Model.Core
 		{
 			using (Database database = new Database(connection, false))
 			{
-				var table = string.Empty;
-				bool pkIdentity = true;
-				var atributos = this.GetType().GetTypeInfo().GetCustomAttributes<MapperTableAttribute>(false);
-				foreach (var atributo in atributos)
-				{
-					table = atributo.Table;
-					pkIdentity = atributo.PKIdentity;
-				}
-				var oDictionary = GetEntityParametersDictionary(this, procName);
-				ArrayList pParameters = null;
-				var sql = getInsertSQL(database, table, oDictionary, out pParameters, pkIdentity);
-				return new { SQL = sql, Parameters = pParameters };
+				return getSQLSaveString(database, procName);
 			}
+		}
+
+		public dynamic getSQLSaveString(Database database, string procName = "Insert")
+		{
+			var table = string.Empty;
+			bool pkIdentity = true;
+			var atributos = this.GetType().GetTypeInfo().GetCustomAttributes<MapperTableAttribute>(false);
+			foreach (var atributo in atributos)
+			{
+				table = atributo.Table;
+				pkIdentity = atributo.PKIdentity;
+			}
+			var oDictionary = GetEntityParametersDictionary(this, procName);
+			ArrayList pParameters = null;
+			var sql = getInsertSQL(database, table, oDictionary, out pParameters, pkIdentity);
+			return new { SQL = sql, Parameters = pParameters };
 		}
 
 		public dynamic getSQLUpdateString(string connection, string procName = "Update")
 		{
 			using (Database database = new Database(connection, false))
 			{
-				var table = string.Empty;
-				var pk = string.Empty;
-				var atributos = this.GetType().GetTypeInfo().GetCustomAttributes<MapperTableAttribute>(false);
-				foreach (var atributo in atributos)
-				{
-					table = atributo.Table;
-					pk = atributo.PK;
-				}
-				var oDictionary = GetEntityParametersDictionary(this, procName);
-
-				var oDictionaryWhere = new Dictionary<string, object>();
-				oDictionaryWhere.Add(pk, PK);
-
-				ArrayList pParameters = null;
-				var sql = getUpdateSQL(database, table, oDictionary, oDictionaryWhere, out pParameters);
-				return new { SQL = sql, Parametros = pParameters };
+				return getSQLUpdateString(database, procName);
 			}
+		}
+
+		public dynamic getSQLUpdateString(Database database, string procName = "Update")
+		{
+			var table = string.Empty;
+			var pk = string.Empty;
+			var atributos = this.GetType().GetTypeInfo().GetCustomAttributes<MapperTableAttribute>(false);
+			foreach (var atributo in atributos)
+			{
+				table = atributo.Table;
+				pk = atributo.PK;
+			}
+			var oDictionary = GetEntityParametersDictionary(this, procName);
+
+			var oDictionaryWhere = new Dictionary<string, object>();
+			oDictionaryWhere.Add(pk, PK);
+
+			ArrayList pParameters = null;
+			var sql = getUpdateSQL(database, table, oDictionary, oDictionaryWhere, out pParameters);
+			return new { SQL = sql, Parametros = pParameters };
 		}
 
 		public dynamic getSQLDeleteString(string connection, string procName = "Delete")
 		{
 			using (Database database = new Database(connection, false))
 			{
-				var table = string.Empty;
-				var pk = string.Empty;
-				var atributos = this.GetType().GetTypeInfo().GetCustomAttributes<MapperTableAttribute>(false);
-				foreach (var atributo in atributos)
-				{
-					table = atributo.Table;
-					pk = atributo.PK;
-				}
-				var oDictionaryWhere = new Dictionary<string, object>();
-				oDictionaryWhere.Add(pk, PK);
-				ArrayList pParameters = null;
-				var sql = getDeleteSQL(database, table, oDictionaryWhere, out pParameters);
-				return new { SQL = sql, Parametros = pParameters };
+				return getSQLDeleteString(database, procName);
 			}
+		}
+
+		public dynamic getSQLDeleteString(Database database, string procName = "Delete")
+		{
+			var table = string.Empty;
+			var pk = string.Empty;
+			var atributos = this.GetType().GetTypeInfo().GetCustomAttributes<MapperTableAttribute>(false);
+			foreach (var atributo in atributos)
+			{
+				table = atributo.Table;
+				pk = atributo.PK;
+			}
+			var oDictionaryWhere = new Dictionary<string, object>();
+			oDictionaryWhere.Add(pk, PK);
+			ArrayList pParameters = null;
+			var sql = getDeleteSQL(database, table, oDictionaryWhere, out pParameters);
+			return new { SQL = sql, Parametros = pParameters };
 		}
 		#endregion
 
@@ -510,7 +545,7 @@ namespace WebMotors.Components.Model.Core
 		#region [ Entity ]
 
 		#region [ Get ]
-		private static void GetListRelations<T>(GetEntity getEntity, string connection, string procedure = "Get")
+		private static void GetListRelations<T>(GetEntity getEntity, Database database, string procedure = "Get")
 			where T : BaseModel<TPk>
 		{
 			foreach (var p in getEntity.ListEntity)
@@ -526,19 +561,16 @@ namespace WebMotors.Components.Model.Core
 						p.SetValue(getEntity.Instance, listEntity);
 						var getEntityListRelation = getEntityType(attribute.ClassRelationship, procedure, attribute.ForeignKey);
 
-						using (Database database = new Database(connection))
+						var sqlString = getEntityListRelation.getSQLString(database, attribute.ForeignKey);
+						ArrayList pParameters = SQLHelperEdited.AddParameter(database, attribute.ForeignKey, ((T)getEntity.Instance).PK);
+						using (DbDataReader dr = SQLHelperEdited.ExecuteReader(database, sqlString, pParameters, CommandType.Text))
 						{
-							var sqlString = getEntityListRelation.getSQLString(database, attribute.ForeignKey);
-							ArrayList pParameters = SQLHelperEdited.AddParameter(database, attribute.ForeignKey, ((T)getEntity.Instance).PK);
-							using (DbDataReader dr = SQLHelperEdited.ExecuteReader(database, sqlString, pParameters, CommandType.Text))
+							while (dr.Read())
 							{
-								while (dr.Read())
-								{
-									var item = getEntityListRelation.CopyObject();
-									setEntity(item, dr);
-									listEntity.Add(item.Instance);
-									setForeinKeyEntity(item.Instance, getEntity.Instance, attribute.ForeignKey);
-								}
+								var item = getEntityListRelation.CopyObject();
+								setEntity(item, dr);
+								listEntity.Add(item.Instance);
+								setForeinKeyEntity(item.Instance, getEntity.Instance, attribute.ForeignKey);
 							}
 						}
 						listEntity.EndFill();
