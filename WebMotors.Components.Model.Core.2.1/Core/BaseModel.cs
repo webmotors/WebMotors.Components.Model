@@ -83,13 +83,13 @@ namespace WebMotors.Components.Model.Core
 
 			var sqlString = getEntity.getSQLString(database);
 			ArrayList pParameters = SQLHelperEdited.AddParameter(database, "@Pk", pk);
-			using (DbDataReader dr = SQLHelperEdited.ExecuteReader(database, sqlString, pParameters, CommandType.Text))
+			SQLHelperEdited.ExecuteReader(database, sqlString, pParameters, (DbDataReader dr) =>
 			{
 				while (dr.Read())
 				{
 					setEntity(getEntity, dr);
 				}
-			}
+			}, CommandType.Text);
 
 			GetListRelations<T>(getEntity, database, procedure);
 			if (getEntity.EntityFill) return (T)getEntity.Instance;
@@ -481,13 +481,13 @@ namespace WebMotors.Components.Model.Core
 		private static List<T> select<T>(Database database, string sql, ArrayList pParameters, CommandType commandType, string procedure = null)
 		{
 			List<T> retorno = new List<T>();
-			using (DbDataReader dr = SQLHelperEdited.ExecuteReader(database, sql, pParameters, commandType))
+			SQLHelperEdited.ExecuteReader(database, sql, pParameters, (DbDataReader dr) =>
 			{
 				while (dr.Read())
 				{
 					retorno.Add(FillEntity<T>(dr, default(T), procedure));
 				}
-			}
+			}, commandType);
 			return retorno;
 		}
 
@@ -496,7 +496,7 @@ namespace WebMotors.Components.Model.Core
 			List<T> retorno = new List<T>();
 			int pageCount = 0;
 			int totalRecords = 0;
-			using (DbDataReader dr = SQLHelperEdited.ExecuteReader(database, database.SqlStringPaging(sql, page, pageSize, orderBy), pParameters, commandType))
+			SQLHelperEdited.ExecuteReader(database, database.SqlStringPaging(sql, page, pageSize, orderBy), pParameters, (DbDataReader dr) =>
 			{
 				while (dr.Read())
 				{
@@ -504,7 +504,7 @@ namespace WebMotors.Components.Model.Core
 					totalRecords = database.InWhileDR(dr);
 				}
 				totalRecords = database.AfterWhileDR(dr, totalRecords);
-			}
+			}, commandType);
 			pageCount = Convert.ToInt32((Math.Floor(Convert.ToDecimal(totalRecords) / pageSize)));
 			if ((Convert.ToDecimal(totalRecords) % pageSize) > 0)
 				pageCount++;
@@ -563,7 +563,7 @@ namespace WebMotors.Components.Model.Core
 
 						var sqlString = getEntityListRelation.getSQLString(database, attribute.ForeignKey);
 						ArrayList pParameters = SQLHelperEdited.AddParameter(database, attribute.ForeignKey, ((T)getEntity.Instance).PK);
-						using (DbDataReader dr = SQLHelperEdited.ExecuteReader(database, sqlString, pParameters, CommandType.Text))
+						SQLHelperEdited.ExecuteReader(database, sqlString, pParameters, (DbDataReader dr) =>
 						{
 							while (dr.Read())
 							{
@@ -572,7 +572,7 @@ namespace WebMotors.Components.Model.Core
 								listEntity.Add(item.Instance);
 								setForeinKeyEntity(item.Instance, getEntity.Instance, attribute.ForeignKey);
 							}
-						}
+						}, CommandType.Text);
 						listEntity.EndFill();
 					}
 				}

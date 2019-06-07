@@ -28,11 +28,14 @@ namespace WebMotors.Components.Model.Core
 		#endregion
 
 		#region [ READER ]
-		public static DbDataReader ExecuteReader(Database database, string pNameProcedure, ArrayList pParameters, CommandType pCommandType = CommandType.StoredProcedure)
+		public static void ExecuteReader(Database database, string pNameProcedure, ArrayList pParameters, Action<DbDataReader> method, CommandType pCommandType = CommandType.StoredProcedure)
 		{
 			using (DbCommand oSqlCommand = SQLHelperEdited.CreateCommand(database, pNameProcedure, pParameters, pCommandType))
 			{
-				return oSqlCommand.ExecuteReader();
+				using (DbDataReader dr = oSqlCommand.ExecuteReader())
+				{
+					method(dr);
+				}
 			}
 		}
 		#endregion
