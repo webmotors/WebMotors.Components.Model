@@ -33,6 +33,13 @@ namespace WebMotors.Components.Model.Core
 			CreateConnection(automaticOpenConnection);
 		}
 
+		public Database(DbProviderFactory factory, string connectionString, bool automaticOpenConnection = true)
+		{
+			_factory = factory;
+			_stringConnection = connectionString;
+			CreateConnection(automaticOpenConnection);
+		}
+
 		#endregion
 
 		#region [ +Properties ]
