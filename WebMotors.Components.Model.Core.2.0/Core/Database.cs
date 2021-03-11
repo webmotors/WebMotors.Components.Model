@@ -72,6 +72,27 @@ namespace WebMotors.Components.Model.Core
 			CreateConnection(automaticOpenConnection);
 		}
 
+		public Database(DbProviderFactory factory, string connection, bool automaticOpenConnection = true, IConfigurationRoot configuration = null, Action<string> log = null)
+		{
+			_log = log;
+			if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json")))
+			{
+				if (configuration == null)
+					configuration = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
+				_stringConnection = $"{configuration["connectionstrings:{0}:connectionstring".FormatStr(connection)]}";
+			}
+			if (string.IsNullOrWhiteSpace(_stringConnection))
+				_stringConnection = connection;
+			_factory = factory;
+			Log(_factory.ToString());
+			CreateConnection(automaticOpenConnection);
+		}
+
+		~Database()
+		{
+			Dispose();
+		}
+
 		#endregion
 
 		#region [ +Properties ]
@@ -235,7 +256,7 @@ namespace WebMotors.Components.Model.Core
 			prm.Direction = direcao;
 			if (tamanho > 0)
 				prm.Size = tamanho;
-			return prm;
+			return SQLHelperEdited.CheckParameter(prm);
 		}
 
 		private void ConfigureSqlParameter(SqlParameter prm, object valor)

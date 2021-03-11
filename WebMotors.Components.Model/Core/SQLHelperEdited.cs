@@ -140,7 +140,7 @@ namespace WebMotors.Components.Model.Core
 			return oObject;
 		}
 
-		private static DbParameter CheckParameter(DbParameter pSqlParameter)
+		internal static DbParameter CheckParameter(DbParameter pSqlParameter)
 		{
 			if (pSqlParameter.Value == null)
 				pSqlParameter.Value = DBNull.Value;

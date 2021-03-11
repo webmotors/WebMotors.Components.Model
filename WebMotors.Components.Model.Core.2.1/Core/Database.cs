@@ -94,6 +94,11 @@ namespace WebMotors.Components.Model.Core
 			CreateConnection(automaticOpenConnection);
 		}
 
+		~Database()
+		{
+			Dispose();
+		}
+
 		#endregion
 
 		#region [ +Properties ]
@@ -257,7 +262,7 @@ namespace WebMotors.Components.Model.Core
 			prm.Direction = direcao;
 			if (tamanho > 0)
 				prm.Size = tamanho;
-			return prm;
+			return SQLHelperEdited.CheckParameter(prm);
 		}
 
 		private void ConfigureSqlParameter(SqlParameter prm, object valor)
