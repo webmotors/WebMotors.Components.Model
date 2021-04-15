@@ -66,6 +66,7 @@
     <Compile Include="Core\PublicExtensions.cs" />
     <Compile Include="Core\Security\Password.cs" />
     <Compile Include="Core\SQLHelperEdited.cs" />
+    <Compile Include="Interfaces\IDatabase.cs" />
     <Compile Include="PagingInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Validation\Attributes\BaseAttribute.cs" />
