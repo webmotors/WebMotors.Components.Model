@@ -5,10 +5,11 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using System.Reflection;
 using System.Text;
+using WebMotors.Components.Model.Interfaces;
 
 namespace WebMotors.Components.Model.Core
 {
-	public class Database : IDisposable
+	public class Database : IDatabase
 	{
 		#region [ +private fields ]
 
